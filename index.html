@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>我的工作，会被 AI 替代吗？｜国风互动长卷</title>
+<style>
+  /* ===== 国风配色（宣纸 · 朱砂 · 鎏金 · 青绿 · 黛蓝） ===== */
+  :root{
+    --paper:#f5efe0;        /* 宣纸米白 */
+    --paper-2:#ece2cb;      /* 深一档宣纸 */
+    --ink:#2b2620;          /* 玄墨 */
+    --ink-2:#5a5246;        /* 赭墨 */
+    --muted:#8a8170;        /* 弱化 */
+    --cinnabar:#a8322a;     /* 朱砂红 */
+    --cinnabar-deep:#7d211b;
+    --gold:#b8860b;         /* 鎏金 */
+    --gold-soft:#c9a35c;
+    --jade:#2f6d5e;         /* 青绿 */
+    --jade-soft:#5a8a7a;
+    --indigo:#2c4a6e;       /* 黛蓝 */
+    --grid:#e2d9c4;         /* 纸色网格线 */
+    --ring:rgba(43,38,32,.16);
+    --font-serif:"Kaiti SC","STKaiti","KaiTi","FangSong","STFangsong","Noto Serif SC","SimSun",serif;
+    --font-sans:system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    font-family:var(--font-sans);
+    background:var(--paper);color:var(--ink);
+    overflow:hidden;-webkit-font-smoothing:antialiased;
+    /* 宣纸纹理 */
+    background-image:
+      radial-gradient(ellipse at 18% 12%, rgba(184,134,11,.05) 0%, transparent 55%),
+      radial-gradient(ellipse at 82% 88%, rgba(47,109,94,.05) 0%, transparent 55%),
+      repeating-linear-gradient(0deg, rgba(43,38,32,.012) 0 2px, transparent 2px 4px);
+  }
+
+  /* ===== 动态背景画布（金尘 + 墨点 + 花瓣） ===== */
+  #bgCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+  /* ===== 页面容器 ===== */
+  .stage{position:fixed;inset:0;overflow:hidden;z-index:1;}
+  .slide{
+    position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    opacity:0;visibility:hidden;transform:translateX(7%);
+    transition:opacity .55s ease,transform .55s ease,visibility .55s;
+    padding:calc(env(safe-area-inset-top,0px) + 34px) 22px 110px;
+  }
+  .slide.active{opacity:1;visibility:visible;transform:translateX(0);}
+  .slide.exit-left{transform:translateX(-7%);}
+  .wrap{max-width:640px;margin:0 auto;position:relative;}
+
+  /* ===== 竖排装饰（落款） ===== */
+  .vtxt{writing-mode:vertical-rl;letter-spacing:.25em;font-family:var(--font-serif);
+        color:var(--muted);font-size:13px;}
+
+  /* ===== 印章 ===== */
+  .seal{
+    display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--cinnabar);color:#f7f1e3;font-family:var(--font-serif);
+    border-radius:7px;padding:9px 9px;line-height:1.12;font-weight:600;
+    transform:rotate(-5deg);
+    box-shadow:inset 0 0 0 2px rgba(247,241,227,.5), 0 2px 6px rgba(43,38,32,.25);
+    letter-spacing:.1em;
+  }
+  .seal span{font-size:13px;}
+  .seal.big{padding:13px 13px;} .seal.big span{font-size:17px;}
+
+  /* ===== 排版 ===== */
+  .tag{display:inline-block;font-family:var(--font-serif);font-size:12px;letter-spacing:.12em;
+       color:var(--cinnabar);background:rgba(168,50,42,.06);
+       border:1px solid rgba(168,50,42,.3);border-radius:4px;padding:5px 12px;margin-bottom:20px;}
+  .kicker{font-family:var(--font-serif);font-size:13px;color:var(--gold);letter-spacing:.18em;margin-bottom:12px;}
+  h1{font-family:var(--font-serif);font-size:38px;line-height:1.24;font-weight:700;letter-spacing:.02em;}
+  h2{font-family:var(--font-serif);font-size:27px;line-height:1.32;font-weight:700;}
+  h3{font-family:var(--font-serif);font-size:18px;line-height:1.45;font-weight:700;margin-bottom:8px;}
+  .lead{font-size:16px;line-height:1.8;color:var(--ink-2);margin-top:14px;}
+  .muted{color:var(--muted);font-size:13px;line-height:1.65;}
+  .small{font-size:12px;color:var(--muted);line-height:1.6;}
+  .spacer{height:22px;}
+  .divider{height:1px;background:linear-gradient(90deg,transparent,var(--ring),transparent);margin:22px 0;position:relative;}
+  .divider::after{content:"◆";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+                  color:var(--gold-soft);font-size:10px;background:var(--paper);padding:0 8px;}
+
+  /* ===== 封面 ===== */
+  .cover{
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(168,50,42,.22) 0%, transparent 55%),
+      linear-gradient(165deg,#2b2620 0%,#3a2a1e 30%,#7d211b 72%,#a8322a 100%);
+    color:#f7f1e3;display:flex;flex-direction:column;justify-content:center;align-items:center;
+  }
+  .cover .wrap{width:100%;}
+  .cover .tag{color:#f0c98a;border-color:rgba(240,201,138,.45);background:rgba(240,201,138,.08);}
+  .cover h1{font-size:40px;color:#f7f1e3;text-shadow:0 2px 18px rgba(0,0,0,.35);}
+  .cover .lead{color:#e9d9bd;margin-top:18px;}
+  .cover .hook{margin-top:36px;font-size:15px;line-height:1.8;color:#f3e9d6;
+               background:rgba(0,0,0,.22);border:1px solid rgba(240,201,138,.4);
+               border-radius:10px;padding:16px 18px;}
+  .cover .hook b{color:#f0c98a;}
+  .btn{margin-top:32px;display:inline-block;text-align:center;font-weight:600;font-size:17px;
+       font-family:var(--font-serif);letter-spacing:.06em;
+       color:#7d211b;background:linear-gradient(180deg,#f3e3bd,#e6c986);
+       border:1px solid #c9a35c;border-radius:8px;padding:15px 30px;cursor:pointer;width:100%;
+       box-shadow:0 8px 26px rgba(0,0,0,.25);}
+  .btn:active{transform:scale(.98);}
+  .btn.primary{color:#f7f1e3;background:linear-gradient(180deg,#b8432f,#8f2822);border-color:#7d211b;}
+
+  /* 祥云 */
+  .cloud{position:absolute;opacity:.5;animation:float 26s linear infinite;pointer-events:none;}
+  .cloud.c1{top:8%;left:-12%;width:180px;animation-duration:34s;}
+  .cloud.c2{top:20%;left:60%;width:150px;animation-duration:44s;opacity:.32;animation-delay:-12s;}
+  @keyframes float{from{transform:translateX(0);}to{transform:translateX(130vw);}}
+
+  /* ===== 卷轴 ===== */
+  .scrollbar{height:10px;border-radius:6px;background:linear-gradient(180deg,#3a2a1e,#5a4030,#3a2a1e);margin:0 4px;}
+  .scroll-unroll{animation:unroll 1s ease both;}
+  @keyframes unroll{from{opacity:0;transform:scaleY(.2);transform-origin:top;}to{opacity:1;transform:scaleY(1);}}
+
+  /* ===== 数据块 / stat tiles ===== */
+  .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0;}
+  .tile{background:var(--paper-2);border:1px solid var(--ring);border-radius:10px;padding:15px 12px;text-align:center;
+        box-shadow:0 1px 0 rgba(255,255,255,.6) inset;}
+  .tile .v{font-size:27px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-serif);color:var(--ink);}
+  .tile .v.pos{color:var(--jade);}
+  .tile .v.neg{color:var(--cinnabar);}
+  .tile .l{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.45;}
+  .kpi{background:var(--paper-2);border:1px solid var(--ring);border-radius:10px;padding:16px;margin:12px 0;
+       box-shadow:0 1px 0 rgba(255,255,255,.6) inset;}
+  .kpi .v{font-size:31px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-serif);}
+  .kpi .l{font-size:13px;color:var(--ink-2);margin-top:5px;line-height:1.55;}
+  .kpi .s{font-size:11px;color:var(--muted);margin-top:4px;}
+
+  /* ===== 图表 ===== */
+  .chart{width:100%;height:300px;margin:8px 0;}
+  .chart.h250{height:250px;} .chart.h230{height:230px;}
+  .chartcap{font-size:11px;color:var(--muted);line-height:1.55;margin-top:5px;}
+
+  /* ===== 两栏对比 ===== */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0;}
+  .col{border-radius:10px;padding:15px;border:1px solid var(--ring);background:var(--paper-2);}
+  .col.danger{border-color:rgba(168,50,42,.35);background:rgba(168,50,42,.05);}
+  .col.safe{border-color:rgba(47,109,94,.4);background:rgba(47,109,94,.06);}
+  .col .h{font-family:var(--font-serif);font-size:14px;font-weight:700;margin-bottom:9px;}
+  .col.danger .h{color:var(--cinnabar);}
+  .col.safe .h{color:var(--jade);}
+  .col ul{list-style:none;}
+  .col li{font-size:13px;line-height:1.6;color:var(--ink-2);padding:3px 0;padding-left:14px;position:relative;}
+  .col li::before{content:"";position:absolute;left:0;top:12px;width:5px;height:5px;border-radius:50%;background:var(--gold-soft);}
+
+  /* ===== 求签 ===== */
+  .lot-box{text-align:center;margin:18px 0;}
+  .lot-box .stick{font-size:52px;display:inline-block;transform-origin:50% 100%;animation:shake 1s ease-in-out infinite;}
+  @keyframes shake{0%,100%{transform:rotate(-7deg);}50%{transform:rotate(7deg);}}
+  .quiz{display:flex;flex-direction:column;gap:12px;margin-top:22px;}
+  .opt{border:1.5px solid var(--ring);border-radius:10px;padding:16px;background:var(--paper-2);
+       cursor:pointer;display:flex;align-items:center;gap:12px;transition:border-color .15s,background .15s;}
+  .opt:active{border-color:var(--cinnabar);}
+  .opt .dot{width:20px;height:20px;border-radius:50%;border:2px solid var(--muted);flex:0 0 auto;}
+  .opt .t{font-size:15px;line-height:1.5;}
+  .opt.sel{border-color:var(--cinnabar);background:rgba(168,50,42,.06);}
+  .opt.sel .dot{border-color:var(--cinnabar);background:var(--cinnabar);}
+
+  /* ===== 结果 · 签文 ===== */
+  .meter{height:14px;border-radius:999px;background:var(--paper-2);overflow:hidden;margin:22px 0 8px;border:1px solid var(--ring);}
+  .meter .fill{height:100%;border-radius:999px;width:0;transition:width 1.2s cubic-bezier(.2,.8,.2,1);}
+  .result-card{background:var(--paper-2);border:1px solid var(--ring);border-radius:12px;padding:20px;margin:16px 0;}
+  .result-tier{font-family:var(--font-serif);font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .result-idx{font-size:42px;font-weight:800;font-variant-numeric:tabular-nums;font-family:var(--font-serif);}
+  .result-idx small{font-size:15px;font-weight:600;color:var(--muted);}
+  .qian{font-family:var(--font-serif);font-size:15px;line-height:1.9;color:var(--ink);background:rgba(184,134,11,.08);
+        border-left:3px solid var(--gold);padding:12px 14px;border-radius:0 8px 8px 0;margin:14px 0;letter-spacing:.03em;}
+  /* 盖章动画 */
+  .stamp{position:absolute;right:18px;top:10px;opacity:0;transform:scale(2) rotate(-20deg);transition:all .5s cubic-bezier(.2,.9,.3,1.4);}
+  .stamp.on{opacity:1;transform:scale(1) rotate(-5deg);}
+
+  /* ===== 太极 ===== */
+  .taiji-wrap{display:flex;justify-content:center;margin:22px 0;}
+  .taiji{width:120px;height:120px;animation:spin 14s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ===== 处境卡片 ===== */
+  .cards{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+  .card{background:var(--paper-2);border:1px solid var(--ring);border-radius:10px;padding:16px;
+        border-left:4px solid var(--gold);}
+  .card .h{font-family:var(--font-serif);font-size:16px;font-weight:700;margin-bottom:7px;}
+  .card .b{font-size:13px;line-height:1.75;color:var(--ink-2);}
+  .card .stat{font-size:13px;font-weight:700;color:var(--cinnabar);margin-top:9px;}
+
+  /* ===== 三条路径 ===== */
+  .paths{display:flex;flex-direction:column;gap:12px;margin-top:16px;}
+  .path{display:flex;gap:13px;background:var(--paper-2);border:1px solid var(--ring);border-radius:10px;padding:15px;}
+  .path .n{width:32px;height:32px;border-radius:8px;background:var(--cinnabar);color:#f7f1e3;
+           font-family:var(--font-serif);font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+  .path .t{font-family:var(--font-serif);font-size:15px;font-weight:700;margin-bottom:4px;}
+  .path .d{font-size:13px;line-height:1.65;color:var(--ink-2);}
+
+  /* ===== 竹简清单 ===== */
+  .todo{margin-top:16px;display:flex;flex-direction:column;gap:9px;}
+  .todo label{display:flex;align-items:center;gap:11px;background:var(--paper-2);border:1px solid var(--ring);
+              border-radius:8px;padding:14px;cursor:pointer;font-size:14px;position:relative;}
+  .todo label::before{content:"";position:absolute;left:-3px;top:0;bottom:0;width:3px;background:var(--gold-soft);border-radius:2px;}
+  .todo input{width:18px;height:18px;accent-color:var(--cinnabar);flex:0 0 auto;}
+  .todo .done{color:var(--muted);text-decoration:line-through;}
+
+  /* ===== 来源 ===== */
+  .sources{margin-top:14px;font-size:11px;color:var(--muted);line-height:1.75;}
+  .sources li{margin-bottom:5px;list-style:none;padding-left:14px;position:relative;}
+  .sources li::before{content:"·";position:absolute;left:2px;color:var(--gold-soft);}
+
+  /* ===== 导航 ===== */
+  .nav-arrows{position:fixed;bottom:22px;left:0;right:0;display:flex;justify-content:space-between;
+              padding:0 16px;pointer-events:none;z-index:30;}
+  .nav-arrows button{pointer-events:auto;width:44px;height:44px;border-radius:50%;border:1px solid var(--ring);
+                     background:rgba(245,239,224,.92);color:var(--ink);font-size:22px;cursor:pointer;
+                     display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);
+                     font-family:var(--font-serif);}
+  .nav-arrows button:disabled{opacity:.22;cursor:default;}
+  .dots{position:fixed;bottom:18px;left:0;right:0;display:flex;justify-content:center;gap:6px;z-index:29;pointer-events:none;}
+  .dots i{width:6px;height:6px;border-radius:50%;background:var(--gold-soft);opacity:.5;transition:all .3s;}
+  .dots i.on{width:18px;border-radius:999px;background:var(--cinnabar);opacity:1;}
+
+  @media (max-width:360px){ h1{font-size:32px;} .cover h1{font-size:33px;} .tiles{grid-template-columns:1fr 1fr;} }
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none !important;transition:none !important;}
+    #bgCanvas{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bgCanvas"></canvas>
+
+<div class="stage" id="stage">
+
+  <!-- ================= P1 封面 ================= -->
+  <section class="slide cover active" data-chart="none">
+    <svg class="cloud c1" viewBox="0 0 200 90"><path d="M20 60 Q10 40 40 38 Q45 20 72 24 Q85 8 108 22 Q135 12 150 34 Q180 30 182 52 Q198 56 188 68 Z" fill="#f0c98a"/></svg>
+    <svg class="cloud c2" viewBox="0 0 200 90"><path d="M20 60 Q10 40 40 38 Q45 20 72 24 Q85 8 108 22 Q135 12 150 34 Q180 30 182 52 Q198 56 188 68 Z" fill="#f0c98a"/></svg>
+    <div class="wrap" style="text-align:center;">
+      <div style="display:flex;justify-content:center;margin-bottom:26px;"><span class="seal big"><span>数智<br>问道</span></span></div>
+      <div class="kicker" style="color:#f0c98a;">AI 数智时代 · 就业图鉴</div>
+      <h1>我的工作，<br>会被 AI 替代吗？</h1>
+      <p class="lead" style="text-align:center;">一幅数字长卷，解开无数人心里同一个问题。</p>
+      <div class="hook" style="text-align:left;">长江商学院对 <b>11,814 名职场人</b>的调研显示：<b>85.53%</b> 的人对 AI 带来的就业冲击感到担忧。你是其中一个吗？</div>
+      <button class="btn" onclick="go(1)">展卷 ↓</button>
+    </div>
+  </section>
+
+  <!-- ================= P2 卷首语 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <div class="scrollbar"></div>
+      <div class="scroll-unroll" style="background:var(--paper);border:1px solid var(--ring);border-radius:0 0 10px 10px;padding:22px 20px;">
+        <span class="tag">卷首</span>
+        <h2>凌晨 1 点，你刷到一条推送</h2>
+        <p class="lead">「某大厂用 AI 取代了 XX 个岗位」。你点开，心跳快了一拍，然后开始在心里，把自己和那条新闻对号入座。</p>
+        <div class="spacer"></div>
+        <div class="kpi">
+          <div class="v" style="color:var(--cinnabar);">85.53%</div>
+          <div class="l">受访职场人对 AI 就业冲击表示担忧</div>
+          <div class="s">长江商学院《生成式人工智能与职场心理健康研究报告》，2025 年 5 月，n=11,814</div>
+        </div>
+        <div class="kpi">
+          <div class="v" style="color:var(--cinnabar-deep);">66.7%</div>
+          <div class="l">公众对 AI 感到焦虑或迷茫</div>
+          <div class="s">澎湃新闻《2025 年人工智能公众态度追踪调查》，n=1,821</div>
+        </div>
+        <p class="lead">这不是你一个人的深夜。可焦虑往往是模糊的——模糊到不知从何说起。接下来的长卷，我们把它一笔一笔拆开。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P3 全球版图 ================= -->
+  <section class="slide" data-chart="scale">
+    <div class="wrap">
+      <span class="tag">第一境 · 大势</span>
+      <h2>到 2030 年，全球就业版图将重塑</h2>
+      <p class="lead">世界经济论坛《2025 未来就业报告》预测：AI 与自动化，会同时「摧毁」与「创造」岗位——它不是单方面的减法，而是一次版图的重画。</p>
+      <div class="tiles">
+        <div class="tile"><div class="v pos">+1.7亿</div><div class="l">新增岗位<br>（到 2030 年）</div></div>
+        <div class="tile"><div class="v neg">0.92亿</div><div class="l">被替代岗位<br>（到 2030 年）</div></div>
+        <div class="tile"><div class="v">+7800万</div><div class="l">净增岗位<br>（净变化）</div></div>
+      </div>
+      <div class="chart h230" id="chart-scale"></div>
+      <div class="chartcap">单位：亿个岗位。来源：世界经济论坛《2025 未来就业报告》。</div>
+      <div class="kpi">
+        <div class="v" style="color:var(--indigo);">22%</div>
+        <div class="l">就业机会将在 2030 年前面临变革；约 40% 的工作技能将发生改变</div>
+        <div class="s">63% 的雇主把「技能差距」视为转型的最大障碍——变的是岗位，更变的是人。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P4 高盛 · 3 亿 ================= -->
+  <section class="slide" data-chart="industry">
+    <div class="wrap">
+      <span class="tag">第二境 · 规模</span>
+      <h2>3 亿岗位，暴露在 AI 之下</h2>
+      <p class="lead">高盛测算，全球约 <b style="color:var(--cinnabar);">3 亿</b>个全职岗位暴露在 AI 自动化之下，相当于全球 18% 的工作；美欧约三分之二的工作至少部分可被自动化。</p>
+      <div class="chart h250" id="chart-industry"></div>
+      <div class="chartcap">各行业工作内容可被 AI 自动化的比例（美国口径）。来源：高盛研究报告，2023。</div>
+      <p class="small" style="margin-top:10px;">注意：暴露 ≠ 失业。它说的是「哪些工作的内容更容易被 AI 接手」，而不是「谁明天会丢饭碗」。</p>
+    </div>
+  </section>
+
+  <!-- ================= P5 谁最危险 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">第三境 · 分野</span>
+      <h2>这一次，轮到「体面工作」</h2>
+      <p class="lead">OpenAI 与宾夕法尼亚大学的研究分析了上千种职业，结论出乎多数人意料：<b>越是高学历、高门槛的脑力岗，越容易暴露在 AI 之下</b>。</p>
+      <div class="kpi">
+        <div class="v" style="color:var(--cinnabar);">80%</div>
+        <div class="l">美国劳动力中，至少 10% 的任务可被 GPT 显著加速</div>
+        <div class="s">其中 19% 的劳动力，50% 以上任务会受影响。来源：OpenAI《GPTs are GPTs》，2023。</div>
+      </div>
+      <div class="two-col">
+        <div class="col danger">
+          <div class="h">高暴露职业</div>
+          <ul><li>数学家、报税员</li><li>量化金融分析师</li><li>作家、会计与审计</li><li>记者、翻译</li></ul>
+        </div>
+        <div class="col safe">
+          <div class="h">「铁饭碗」职业</div>
+          <ul><li>厨师、水电工</li><li>电工、木匠、泥瓦匠</li><li>机械师等 34 类体力岗</li><li>AI 暴露度 ≈ 0</li></ul>
+        </div>
+      </div>
+      <p class="small">「暴露度」指 AI 能把完成任务的时间缩短 50% 以上；它不等于被替代，却精确标出了「最该提前准备」的那批人。</p>
+    </div>
+  </section>
+
+  <!-- ================= P6 求签开题 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">第四境 · 求签</span>
+      <h2>求一支「AI 命数签」</h2>
+      <p class="lead">古人遇事不决，求签问卦。今天我们借这个仪式，用三个问题，从「重复性、人际情感、创造策略」三个维度，估一估你职业的 AI 暴露程度。</p>
+      <div class="lot-box"><span class="stick">🥢</span><div class="muted" style="margin-top:6px;">签筒已就位 · 摇一摇</div></div>
+      <div class="kpi" style="border-left:3px solid var(--gold);">
+        <div class="l">⚠️ 说明：这是一支<strong>参照签</strong>，不是判决书。它衡量「暴露程度」，不是「必然失业」。</div>
+      </div>
+      <button class="btn primary" onclick="startQuiz()">开始摇签 →</button>
+    </div>
+  </section>
+
+  <!-- ================= P7 Q1 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">求签 · 第 1 / 3 问</span>
+      <h2>你日常工作中，重复、规则明确的部分占多少？</h2>
+      <p class="lead">规则越清晰、越可复制的任务，越容易被 AI 接手。</p>
+      <div class="quiz">
+        <div class="opt" data-score="2" onclick="answer(0,2,this)"><span class="dot"></span><span class="t">几乎全部</span></div>
+        <div class="opt" data-score="1" onclick="answer(0,1,this)"><span class="dot"></span><span class="t">大部分</span></div>
+        <div class="opt" data-score="0" onclick="answer(0,0,this)"><span class="dot"></span><span class="t">小部分</span></div>
+        <div class="opt" data-score="0" onclick="answer(0,0,this)"><span class="dot"></span><span class="t">很少 / 几乎没有</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P8 Q2 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">求签 · 第 2 / 3 问</span>
+      <h2>你的工作需要多少面对面的人际与情感交互？</h2>
+      <p class="lead">共情、信任、当面协调，是 AI 目前最难补上的短板。</p>
+      <div class="quiz">
+        <div class="opt" data-score="2" onclick="answer(1,2,this)"><span class="dot"></span><span class="t">很少</span></div>
+        <div class="opt" data-score="1" onclick="answer(1,1,this)"><span class="dot"></span><span class="t">一般</span></div>
+        <div class="opt" data-score="0" onclick="answer(1,0,this)"><span class="dot"></span><span class="t">很多</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P9 Q3 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">求签 · 第 3 / 3 问</span>
+      <h2>你的工作需要多少创造性、策略性或临场判断？</h2>
+      <p class="lead">OpenAI 研究发现，「需要科学方法与批判性思维」的职业，暴露度反而更低。</p>
+      <div class="quiz">
+        <div class="opt" data-score="2" onclick="answer(2,2,this)"><span class="dot"></span><span class="t">很少</span></div>
+        <div class="opt" data-score="1" onclick="answer(2,1,this)"><span class="dot"></span><span class="t">一般</span></div>
+        <div class="opt" data-score="0" onclick="answer(2,0,this)"><span class="dot"></span><span class="t">很多</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P10 结果 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap" style="position:relative;">
+      <span class="tag">你的签文</span>
+      <h2>你的 AI 命数</h2>
+      <div class="seal stamp big" id="r-stamp"><span id="r-stamp-t">命数</span></div>
+      <div class="result-idx" id="r-idx">—</div>
+      <div class="meter"><div class="fill" id="r-meter"></div></div>
+      <div class="result-card">
+        <div class="result-tier" id="r-tier"></div>
+        <div class="qian" id="r-qian"></div>
+        <p class="lead" id="r-desc" style="margin-top:6px;"></p>
+        <div class="divider"></div>
+        <p class="small" id="r-data"></p>
+      </div>
+      <p class="muted">签是参照，不是判决。真正的变量是：你接下来打算怎么动。</p>
+      <button class="btn primary" onclick="go(10)">续卷 · 看数据与出路 →</button>
+    </div>
+  </section>
+
+  <!-- ================= P11 反转 ================= -->
+  <section class="slide" data-chart="newjobs">
+    <div class="wrap">
+      <span class="tag">第五境 · 转机</span>
+      <h2>但 AI 也在创造新职业</h2>
+      <p class="lead">同一枚硬币的另一面：2025 年 1–10 月，中国新发 AI 岗位量同比增长 <b style="color:var(--jade);">543%</b>，单月最高飙升 11 倍。</p>
+      <div class="chart h230" id="chart-newjobs"></div>
+      <div class="chartcap">2025 年岗位量增幅领先的 AI 新职业。来源：脉脉《2025 年度人才迁徙报告》。</div>
+      <div class="kpi">
+        <div class="v" style="color:var(--jade);">500 万 +</div>
+        <div class="l">中国 AI 人才缺口，供求比约 1 : 10</div>
+        <div class="s">人社部测算 / 中国信通院 / 猎聘大数据研究院。焦虑的另一面，是机会。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P12 中国人才需求 ================= -->
+  <section class="slide" data-chart="salary">
+    <div class="wrap">
+      <span class="tag">第六境 · 抢人</span>
+      <h2>一边焦虑，一边缺人</h2>
+      <p class="lead">懂 AI 的人，正在被真金白银地抢。AI 岗位的薪资，明显跑赢行业平均——焦虑和机会，本是同一枚硬币。</p>
+      <div class="chart h230" id="chart-salary"></div>
+      <div class="chartcap">AI 领域 vs 新经济行业平均月薪。来源：脉脉《2025 年度人才迁徙报告》。</div>
+      <div class="kpi">
+        <div class="v">1.08</div>
+        <div class="l">AI 人才供需比首次超过 1（供大于求）</div>
+        <div class="s">但结构性紧缺仍在：高性能计算工程师等岗位「约 3 岗争 1 人」。会的人不够，不会的人在等。</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P13 三种处境 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">第七境 · 众生</span>
+      <h2>焦虑是结构性的，不是平均的</h2>
+      <p class="lead">把数据摊开，受影响最深的其实是三群人——他们面对的不是「同一场雨」，而是三种处境。</p>
+      <div class="cards">
+        <div class="card">
+          <div class="h">应届生 / 初级岗</div>
+          <div class="b">面向 1 年以内新人的岗位在缩减；应届生职场安全感在所有群体中垫底。还没上场，就先感受到了寒意。</div>
+          <div class="stat">安全感 3.74 分（垫底）· 初级岗招聘量下降</div>
+        </div>
+        <div class="card">
+          <div class="h">白领知识岗</div>
+          <div class="b">高 AI 暴露行业招聘下降 38%，翻译、文案、会计、记者等文字与数据岗首当其冲——最「体面」的工作，最先被重新估价。</div>
+          <div class="stat">高暴露行业招聘 −38%</div>
+        </div>
+        <div class="card">
+          <div class="h">程序员</div>
+          <div class="b">最懂技术的一群人，也最先被 AI 工具「倒逼」——AI 能力被写进绩效考核，写代码的人要学「指挥 AI 写代码」。</div>
+          <div class="stat">38.51% 被纳入 AI 绩效考核 · 54% 所在公司发生过岗位优化</div>
+        </div>
+      </div>
+      <p class="small" style="margin-top:12px;">来源：脉脉《2025 年度人才迁徙报告》/《2025 春招职场安全感洞察》、麦肯锡研究。</p>
+    </div>
+  </section>
+
+  <!-- ================= P14 焦虑全景 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">第八境 · 心象</span>
+      <h2>焦虑，到底有多普遍？</h2>
+      <p class="lead">不同机构、不同样本，指向同一个方向——AI 焦虑已经不是「个别人的情绪」，而是一种普遍的公共心理。</p>
+      <div class="tiles">
+        <div class="tile"><div class="v neg">85.53%</div><div class="l">担忧 AI 就业冲击<br>长江商学院</div></div>
+        <div class="tile"><div class="v neg">66.7%</div><div class="l">焦虑 / 迷茫<br>澎湃新闻</div></div>
+        <div class="tile"><div class="v neg">44%</div><div class="l">因不知影响而焦虑<br>ADP 全球</div></div>
+      </div>
+      <div class="kpi">
+        <div class="v" style="color:var(--cinnabar);">36.1%</div>
+        <div class="l">担心「技术太快、自己会被替代」</div>
+        <div class="s">智联招聘调研。</div>
+      </div>
+      <div class="kpi">
+        <div class="v" style="color:var(--cinnabar);">42%</div>
+        <div class="l">职场安全感下降；应届生安全感垫底</div>
+        <div class="s">脉脉《2025 春招职场安全感洞察》。</div>
+      </div>
+      <p class="small">更值得警惕的是：长江商学院调研中，34.13% 的重度 AI 担忧者出现抑郁症状，而企业 AI 培训覆盖率仅 2.42%——焦虑在涨，应对的桥却还没修好。</p>
+    </div>
+  </section>
+
+  <!-- ================= P15 太极 · 人机 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">第九境 · 合道</span>
+      <h2>人与 AI，如太极之阴阳</h2>
+      <p class="lead">研究反复指向同一个结论：AI 替代的不是「人」，而是「任务」。与其对抗，不如重新分配——让 AI 司其所能，让人守其所长。</p>
+      <div class="taiji-wrap">
+        <svg class="taiji" viewBox="0 0 120 120" aria-label="太极图">
+          <circle cx="60" cy="60" r="58" fill="#f5efe0" stroke="#a8322a" stroke-width="2"/>
+          <path d="M60 2 A58 58 0 0 1 60 118 A29 29 0 0 1 60 60 A29 29 0 0 0 60 2 Z" fill="#a8322a"/>
+          <path d="M60 2 A58 58 0 0 0 60 118 A29 29 0 0 0 60 60 A29 29 0 0 1 60 2 Z" fill="#2b2620"/>
+          <circle cx="60" cy="31" r="9" fill="#a8322a"/>
+          <circle cx="60" cy="89" r="9" fill="#2b2620"/>
+        </svg>
+      </div>
+      <div class="paths">
+        <div class="path"><div class="n">壹</div><div><div class="t">技能升级：把 AI 当杠杆</div><div class="d">让 AI 接手重复部分，把时间投到它做不了的事上。雇主对「AI 流利度」的需求三年内激增近 7 倍。</div></div></div>
+        <div class="path"><div class="n">贰</div><div><div class="t">向人际与创造迁移</div><div class="d">辅导、谈判、领导力、客户关系等软技能，在 AI 时代反而更安全、更值钱。</div></div></div>
+        <div class="path"><div class="n">叁</div><div><div class="t">人机协作，而非替代</div><div class="d">麦肯锡预测，到 2030 年仅美国通过人机协作，每年可释放约 2.9 万亿美元经济价值。</div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= P16 行动清单 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">第十境 · 笃行</span>
+      <h2>你的 AI 生存力清单</h2>
+      <p class="lead">知而不行，等于不知。勾选你愿意从今天开始做的（可多选）：</p>
+      <div class="todo" id="todo">
+        <label><input type="checkbox"><span>真正上手一个 AI 工具，用它完成一件真实工作</span></label>
+        <label><input type="checkbox"><span>梳理出「AI 做不了」的那部分，把它变成你的壁垒</span></label>
+        <label><input type="checkbox"><span>补一项软技能：表达、谈判、带人或共情</span></label>
+        <label><input type="checkbox"><span>关注自己行业的 AI 落地动态，而不是只看热搜</span></label>
+        <label><input type="checkbox"><span>和同行认真聊一次「你的岗位正在怎么变」</span></label>
+        <label><input type="checkbox"><span>对贩卖焦虑的内容保持怀疑，先查数据再下结论</span></label>
+      </div>
+      <button class="btn primary" onclick="genTodo()">生成我的清单</button>
+      <p class="muted" id="todo-out" style="margin-top:12px;"></p>
+    </div>
+  </section>
+
+  <!-- ================= P17 结语 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap" style="text-align:center;">
+      <span class="tag">卷末</span>
+      <h2>焦虑的尽头，是行动</h2>
+      <p class="lead" style="text-align:left;">「替代你的不是 AI，而是会用 AI 的人」——这句话只说对了一半。更重要的一半是：<b>你不是数据里的一个数字。</b></p>
+      <p class="lead" style="text-align:left;margin-top:12px;">把模糊的恐惧，变成可查证的数据、可借鉴的活法、可执行的一步。这就是这卷长卷想做的事。</p>
+      <div style="display:flex;justify-content:center;margin:24px 0;"><span class="seal big"><span>谨记<br>躬行</span></span></div>
+      <button class="btn" onclick="go(17)">查看数据来源 ↓</button>
+    </div>
+  </section>
+
+  <!-- ================= P18 数据来源 ================= -->
+  <section class="slide" data-chart="none">
+    <div class="wrap">
+      <span class="tag">来源 · 致谢</span>
+      <h2>数据来源</h2>
+      <ul class="sources">
+        <li>世界经济论坛《2025 未来就业报告》</li>
+        <li>高盛《The Potentially Large Effects of AI on Economic Growth》(2023)</li>
+        <li>麦肯锡全球研究院 /《2026 年 AI 现状报告》系列研究</li>
+        <li>OpenAI / 宾夕法尼亚大学《GPTs are GPTs》(2023)</li>
+        <li>长江商学院《生成式人工智能与职场心理健康研究报告》(2025.5)</li>
+        <li>澎湃新闻《2025 年人工智能公众态度追踪调查》</li>
+        <li>ADP《职场人 2025》全球调研</li>
+        <li>脉脉《2025 年度人才迁徙报告》/《2025 春招职场安全感洞察》</li>
+        <li>人社部、中国信通院、猎聘、智联招聘相关公开数据</li>
+      </ul>
+      <div class="divider"></div>
+      <h3>关于本作品</h3>
+      <p class="small">融合新闻课程作业 · 国风互动 H5 新闻（18 页）。选题《我的工作会被 AI 替代吗？——AI 数智时代的就业焦虑》。数据为公开权威来源，经多源交叉核实；「求签」为简化参照模型，不作职业结论。</p>
+      <div class="spacer"></div>
+      <div class="kpi" style="text-align:center;">
+        <div class="l" style="font-family:var(--font-serif);">谢谢观卷 · 留言说说你的职业，和你的答案</div>
+      </div>
+      <button class="btn" onclick="go(0)">回到卷首 ↺</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="dots" id="dots"></div>
+<div class="nav-arrows">
+  <button id="prevBtn" onclick="prev()" aria-label="上一页">‹</button>
+  <button id="nextBtn" onclick="next()" aria-label="下一页">›</button>
+</div>
+
+<script src="https://cdn.bootcdn.net/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
+<script>
+  if (typeof echarts === 'undefined') {
+    document.write('<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"><\/script>');
+  }
+</script>
+<script>
+  /* ===== 导航 ===== */
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var cur = 0;
+  var dots = document.getElementById('dots');
+  slides.forEach(function(_,i){
+    var d = document.createElement('i');
+    d.addEventListener('click', function(){ go(i); });
+    dots.appendChild(d);
+  });
+  var dotEls = Array.prototype.slice.call(dots.children);
+  function render(){
+    slides.forEach(function(s,i){
+      s.classList.toggle('active', i===cur);
+      if(i<cur) s.classList.add('exit-left'); else s.classList.remove('exit-left');
+    });
+    dotEls.forEach(function(d,i){ d.classList.toggle('on', i===cur); });
+    document.getElementById('prevBtn').disabled = (cur===0);
+    document.getElementById('nextBtn').disabled = (cur===slides.length-1);
+    ensureChart(slides[cur]);
+  }
+  function go(n){ cur = Math.max(0, Math.min(slides.length-1, n)); render(); }
+  function next(){ go(cur+1); }
+  function prev(){ go(cur-1); }
+  document.addEventListener('keydown', function(e){
+    if(e.key==='ArrowRight') next();
+    if(e.key==='ArrowLeft') prev();
+  });
+  var sx=0, sy=0;
+  var stage = document.getElementById('stage');
+  stage.addEventListener('touchstart', function(e){ sx=e.touches[0].clientX; sy=e.touches[0].clientY; }, {passive:true});
+  stage.addEventListener('touchend', function(e){
+    var dx=e.changedTouches[0].clientX-sx, dy=e.changedTouches[0].clientY-sy;
+    if(Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.4){ dx<0?next():prev(); }
+  }, {passive:true});
+
+  /* ===== 动态背景：金尘 + 墨点 + 花瓣 ===== */
+  (function(){
+    var cv = document.getElementById('bgCanvas'), ctx = cv.getContext('2d');
+    function resize(){ cv.width = innerWidth; cv.height = innerHeight; }
+    resize(); addEventListener('resize', resize);
+    var P = [];
+    var colors = ['rgba(184,134,11,', 'rgba(168,50,42,', 'rgba(47,109,94,', 'rgba(90,138,122,'];
+    function spawn(n){
+      for(var i=0;i<n;i++){
+        P.push({ x:Math.random()*cv.width, y:Math.random()*cv.height,
+                 r:Math.random()*2.2+0.6, sp:Math.random()*0.35+0.08,
+                 drift:(Math.random()-0.5)*0.2, o:Math.random()*0.5+0.12,
+                 c:colors[Math.floor(Math.random()*colors.length)] });
+      }
+    }
+    spawn(46);
+    function loop(){
+      ctx.clearRect(0,0,cv.width,cv.height);
+      for(var i=0;i<P.length;i++){
+        var p=P[i];
+        p.y -= p.sp; p.x += p.drift;
+        if(p.y < -8){ p.y = cv.height+8; p.x = Math.random()*cv.width; }
+        if(p.x < -8) p.x = cv.width+8; if(p.x > cv.width+8) p.x = -8;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle = p.c + p.o + ')'; ctx.fill();
+      }
+      requestAnimationFrame(loop);
+    }
+    if(!matchMedia('(prefers-reduced-motion: reduce)').matches) loop();
+  })();
+
+  /* ===== ECharts（懒加载 · 国风配色） ===== */
+  var charts = {};
+  var C = { cinnabar:'#a8322a', jade:'#2f6d5e', indigo:'#2c4a6e', gold:'#b8860b', ink:'#2b2620', ink2:'#5a5246', muted:'#8a8170', grid:'#e2d9c4', baseline:'#c9b98f' };
+  function barOption(cats, vals, color, formatter, max){
+    var m = max || Math.max.apply(null, vals) * 1.15;
+    return {
+      grid:{ left:6, right:8, top:8, bottom:4, containLabel:true },
+      xAxis:{ type:'value', max:m, splitLine:{ lineStyle:{ color:C.grid, width:1 } }, axisLabel:{ color:C.muted, fontSize:11 }, axisLine:{ show:false }, axisTick:{ show:false } },
+      yAxis:{ type:'category', data:cats, axisLine:{ lineStyle:{ color:C.baseline } }, axisTick:{ show:false }, axisLabel:{ color:C.ink2, fontSize:12 } },
+      series:[{
+        type:'bar', data:vals, barWidth:18,
+        itemStyle:{ color:color, borderRadius:[0,4,4,0] },
+        label:{ show:true, position:'right', color:C.ink, fontSize:12, fontWeight:600, formatter:formatter }
+      }],
+      tooltip:{ trigger:'item', formatter:function(p){ return p.name+'：'+formatter(p.value); } }
+    };
+  }
+  function twoBar(cats, items){
+    return {
+      grid:{ left:6, right:8, top:8, bottom:4, containLabel:true },
+      xAxis:{ type:'value', splitLine:{ lineStyle:{ color:C.grid, width:1 } }, axisLabel:{ color:C.muted, fontSize:11 }, axisLine:{ show:false }, axisTick:{ show:false } },
+      yAxis:{ type:'category', data:cats, axisLine:{ lineStyle:{ color:C.baseline } }, axisTick:{ show:false }, axisLabel:{ color:C.ink2, fontSize:12 } },
+      series:[{
+        type:'bar', barWidth:18,
+        data: items.map(function(it){ return { value:it.value, itemStyle:{ color:it.color, borderRadius:[0,4,4,0] } }; }),
+        label:{ show:true, position:'right', color:C.ink, fontSize:12, fontWeight:600, formatter:function(p){ return items[p.dataIndex].label(p.value); } }
+      }],
+      tooltip:{ trigger:'item', formatter:function(p){ return cats[p.dataIndex]+'：'+p.value; } }
+    };
+  }
+  var chartDefs = {
+    scale: function(){
+      return twoBar(['被替代岗位','新增岗位'], [
+        { value:0.92, color:C.cinnabar, label:function(v){ return v+' 亿'; } },
+        { value:1.7, color:C.jade, label:function(v){ return '+'+v+' 亿'; } }
+      ]);
+    },
+    industry: function(){
+      return barOption(['建筑 / 清洁 / 维修','商业与金融','生命·物理·社科','建筑与工程','法律','办公行政支持'],
+        [5,35,36,37,44,46], C.cinnabar, function(v){ return v+'%'; }, 52);
+    },
+    newjobs: function(){
+      return barOption(['机器人算法','大模型算法','AI 产品经理'], [212,249,369], C.jade, function(v){ return '+'+v+'%'; }, 410);
+    },
+    salary: function(){
+      return twoBar(['新经济行业平均','AI 领域平均'], [
+        { value:45553, color:C.gold, label:function(v){ return v+' 元'; } },
+        { value:61764, color:C.jade, label:function(v){ return v+' 元'; } }
+      ]);
+    }
+  };
+  function ensureChart(slide){
+    var key = slide.getAttribute('data-chart');
+    if(!key || key==='none') return;
+    var el = document.getElementById('chart-'+key);
+    if(!el) return;
+    if(!charts[key]){ charts[key] = echarts.init(el); charts[key].setOption(chartDefs[key]()); }
+    charts[key].resize();
+  }
+  addEventListener('resize', function(){ for(var k in charts){ charts[k].resize(); } });
+
+  /* ===== 求签 ===== */
+  var answers = [null,null,null];
+  function startQuiz(){ go(6); }
+  function answer(idx, score, el){
+    answers[idx] = score;
+    var qSlide = slides[6+idx];
+    qSlide.querySelectorAll('.opt').forEach(function(o){ o.classList.remove('sel'); });
+    if(el) el.classList.add('sel');
+    setTimeout(function(){ idx<2 ? go(7+idx) : showResult(); }, 280);
+  }
+  function showResult(){
+    var total = answers[0]+answers[1]+answers[2];
+    var idxMap = [8,15,28,40,55,70,84];
+    var pct = idxMap[total];
+    var tier, qian, desc, data, color, stamp;
+    if(total <= 1){
+      tier='上上签 · 人机协作者'; color='var(--jade)'; stamp='上上';
+      qian='心有灵犀非机器，人际温度是金汤。纵有千般算法巧，难替此间情与创。';
+      desc='你的工作依赖人际温度、现场判断或创造性，正是 AI 目前的短板。你的处境相对从容。';
+      data='参照：OpenAI 研究里，厨师、水电工、护士等「体力 + 人际」职业暴露度≈0；越需要共情与临场应变，越难被替代。';
+    } else if(total <= 3){
+      tier='中平签 · 提效者'; color='var(--gold)'; stamp='中平';
+      qian='半由人力半由器，把 AI 作舟楫。勤学善用趁早行，莫待他人先登席。';
+      desc='你有一部分重复任务可被 AI 提效。风险不在「被替代」，而在「不用 AI 的人，被用 AI 的人甩开」。';
+      data='参照：麦肯锡研究显示，使用 AI 辅助工作的员工比例已从 2023 年的 30% 升至 2025 年的 76%。';
+    } else if(total === 4){
+      tier='下中签 · 高暴露区'; color='#ec835a'; stamp='下中';
+      qian='规则之事渐入局，前路须防被替席。移步创造人际处，方得险中破新局。';
+      desc='你的工作有较高比例的规则化任务，正处在 AI 影响的前沿地带，需要主动做出调整。';
+      data='参照：高盛估算，办公行政支持类工作可自动化比例高达 46%，法律类 44%，商业金融类 35%。';
+    } else {
+      tier='下下签 · 重塑区'; color='var(--cinnabar)'; stamp='下下';
+      qian='风雨欲来山欲倾，旧业堪忧须转程。天无绝人之路，重理技艺可再兴。';
+      desc='你的工作重复度高、人际与创造依赖低，暴露度接近最高档。但「高暴露≠必然被替代」——关键在技能迁移。';
+      data='参照：OpenAI 研究里，数学家、报税员、翻译、会计等职业暴露度接近 100%，但实际结果是「任务被接管」，出路在转向判断与协作。';
+    }
+    document.getElementById('r-idx').innerHTML = pct+'% <small>替代指数</small>';
+    document.getElementById('r-idx').style.color = color;
+    document.getElementById('r-stamp-t').innerHTML = stamp;
+    document.getElementById('r-tier').innerHTML = '🀄️ '+tier;
+    document.getElementById('r-qian').textContent = qian;
+    document.getElementById('r-desc').textContent = desc;
+    document.getElementById('r-data').textContent = data;
+    var fill = document.getElementById('r-meter');
+    fill.style.background = color;
+    go(9);
+    setTimeout(function(){
+      fill.style.width = (total/6*100)+'%';
+      document.getElementById('r-stamp').classList.add('on');
+    }, 180);
+  }
+
+  /* ===== 清单 ===== */
+  function genTodo(){
+    var boxes = document.querySelectorAll('#todo input');
+    var picked = [];
+    boxes.forEach(function(b){
+      if(b.checked){ picked.push(b.nextElementSibling.textContent); b.parentElement.classList.add('done'); }
+    });
+    var out = document.getElementById('todo-out');
+    out.textContent = picked.length===0 ? '至少勾一项，给自己一个具体的开始。' : ('✅ 你的清单：'+picked.join('；')+'。');
+  }
+
+  render();
+</script>
+</body>
+</html>
