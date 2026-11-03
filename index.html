@@ -222,6 +222,18 @@
   .dots i{width:6px;height:6px;border-radius:50%;background:var(--gold-soft);opacity:.5;transition:all .3s;}
   .dots i.on{width:18px;border-radius:999px;background:var(--cinnabar);opacity:1;}
 
+  /* ===== 互动国风图案（点选项触发） ===== */
+  .ring{position:fixed;z-index:40;pointer-events:none;border:2px solid var(--cinnabar);border-radius:50%;
+        transform:translate(-50%,-50%);animation:ringPop .75s ease-out forwards;}
+  @keyframes ringPop{0%{width:14px;height:14px;opacity:.9;}100%{width:150px;height:150px;opacity:0;}}
+  .petal{position:fixed;z-index:40;pointer-events:none;width:12px;height:17px;
+         border-radius:60% 60% 60% 60% / 70% 70% 30% 30%;
+         animation:petalFly 1.05s ease-out forwards;will-change:transform,opacity;}
+  @keyframes petalFly{
+    0%{transform:translate(-50%,-50%) rotate(0deg) scale(.5);opacity:1;}
+    100%{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) rotate(var(--rot)) scale(1.15);opacity:0;}
+  }
+
   @media (max-width:360px){ h1{font-size:32px;} .cover h1{font-size:33px;} .tiles{grid-template-columns:1fr 1fr;} }
   @media (prefers-reduced-motion: reduce){
     *{animation:none !important;transition:none !important;}
@@ -564,7 +576,7 @@
       </ul>
       <div class="divider"></div>
       <h3>关于本作品</h3>
-      <p class="small">融合新闻课程作业 · 国风互动 H5 新闻（18 页）。选题《我的工作会被 AI 替代吗？——AI 数智时代的就业焦虑》。数据为公开权威来源，经多源交叉核实；「求签」为简化参照模型，不作职业结论。</p>
+      <p class="small">选题《我的工作会被 AI 替代吗？——AI 数智时代的就业焦虑》。数据为公开权威来源，经多源交叉核实；「求签」为简化参照模型，不作职业结论。</p>
       <div class="spacer"></div>
       <div class="kpi" style="text-align:center;">
         <div class="l" style="font-family:var(--font-serif);">谢谢观卷 · 留言说说你的职业，和你的答案</div>
@@ -718,11 +730,36 @@
   /* ===== 求签 ===== */
   var answers = [null,null,null];
   function startQuiz(){ go(6); }
+  function burstPattern(x, y){
+    var ring = document.createElement('span');
+    ring.className = 'ring';
+    ring.style.left = x+'px'; ring.style.top = y+'px';
+    document.body.appendChild(ring);
+    setTimeout(function(){ ring.remove(); }, 780);
+    var colors = ['#a8322a','#b8860b','#5a8a7a','#c9a35c','#7d211b'];
+    for(var i=0;i<9;i++){
+      var p = document.createElement('span');
+      p.className = 'petal';
+      p.style.left = x+'px'; p.style.top = y+'px';
+      p.style.background = colors[i % colors.length];
+      var ang = (Math.PI*2*i/9) + Math.random()*0.7;
+      var dist = 34 + Math.random()*64;
+      p.style.setProperty('--dx', Math.cos(ang)*dist + 'px');
+      p.style.setProperty('--dy', Math.sin(ang)*dist - 30 + 'px');
+      p.style.setProperty('--rot', (Math.random()*360-180) + 'deg');
+      document.body.appendChild(p);
+      (function(n){ setTimeout(function(){ n.remove(); }, 1100); })(p);
+    }
+  }
   function answer(idx, score, el){
     answers[idx] = score;
     var qSlide = slides[6+idx];
     qSlide.querySelectorAll('.opt').forEach(function(o){ o.classList.remove('sel'); });
-    if(el) el.classList.add('sel');
+    if(el){
+      el.classList.add('sel');
+      var r = el.getBoundingClientRect();
+      burstPattern(r.left + r.width/2, r.top + r.height/2);
+    }
     setTimeout(function(){ idx<2 ? go(7+idx) : showResult(); }, 280);
   }
   function showResult(){
